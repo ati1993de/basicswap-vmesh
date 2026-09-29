@@ -42,13 +42,28 @@ jobs:
       - name: Verify installed VMESH integration
         shell: pwsh
         run: |
-          python -c "from basicswap.basicswap_util import Coins; print('VMESH coin id:', int(Coins.VMESH))"
+          python -c "from basicswap.chainparams import Coins; assert int(Coins.VMESH) == 19; print('VMESH coin id:', int(Coins.VMESH))"
+          if ($LASTEXITCODE -ne 0) {
+            throw "VMESH coin registry verification failed"
+          }
+
           python -c "from basicswap.interface.vmesh.vmesh import VMESHInterface; print('VMESH interface import: PASS')"
+          if ($LASTEXITCODE -ne 0) {
+            throw "VMESH interface verification failed"
+          }
 
       - name: Verify Windows signal compatibility
         shell: pwsh
         run: |
-          python -c "from pathlib import Path; s=Path('basicswap/bin/run.py').read_text(encoding='utf-8'); assert 'if hasattr(signal, \"SIGHUP\"):' in s; print('Windows SIGHUP guard: PASS')"
+          $match = Select-String `
+            -Path "basicswap/bin/run.py" `
+            -SimpleMatch 'if hasattr(signal, "SIGHUP"):'
+
+          if (-not $match) {
+            throw "Windows SIGHUP guard missing"
+          }
+
+          Write-Host "Windows SIGHUP guard: PASS"
 
       - name: Create PyInstaller wrappers
         shell: pwsh
