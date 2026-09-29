@@ -1,0 +1,74 @@
+old/
+build/
+venv/
+.venv/
+*.pyc
+__pycache__
+/dist/
+/*.egg-info
+/*.egg
+/*.eggs
+.tox
+.eggs
+.ruff_cache
+.pytest_cache
+.vectorcode
+.Trash*
+*~
+
+# geckodriver.log
+*.log
+docker/.env
+
+# vscode dev container settings
+compose-dev.yaml
+
+# ------------------------------------------------------
+# Local / private BasicSwap & VargaMesh configuration
+# ------------------------------------------------------
+
+.env
+.env.*
+*.env
+
+basicswap.json
+basicswap.json.*
+bitcoin.conf
+particl.conf
+vargamesh.conf
+
+*.cookie
+.cookie
+
+wallet.dat
+wallets/
+blocks/
+chainstate/
+indexes/
+
+*.log
+logs/
+
+*.pid
+
+# Private keys / certificates / seeds
+*.pem
+*.p12
+*.pfx
+*.seed
+
+# Local backups
+*.bak
+*.backup
+*.old
+
+# Runtime / local data
+data/
+runtime/
+run/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

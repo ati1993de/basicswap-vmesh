@@ -1,0 +1,9 @@
+[flake8]
+ignore = E203, E501, W503
+exclude =
+    basicswap/contrib,
+    basicswap/interface/*/contrib,
+    .eggs,
+    .tox,
+    .venv,
+    bin/install_certifi.py

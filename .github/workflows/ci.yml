@@ -1,0 +1,358 @@
+name: ci
+
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - '**/README.md'
+      - '**/LICENSE'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - '**/README.md'
+      - '**/LICENSE'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.14"
+  BASE_COINS: particl,bitcoin,monero
+  BIN_DIR: /tmp/cached_bin
+  TEST_RELOAD_PATH: /tmp/test_basicswap
+  BSX_SELENIUM_DRIVER: firefox-ci
+  XMR_RPC_USER: xmr_user
+  XMR_RPC_PWD: xmr_pwd
+
+jobs:
+  changes:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    outputs:
+      test_matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+    - uses: actions/checkout@v7
+    - id: filter
+      uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4.0.3
+      with:
+        filters: |
+          part:
+            - 'basicswap/interface/part/**'
+          ltc:
+            - 'basicswap/interface/ltc/**'
+          dcr:
+            - 'basicswap/interface/dcr/**'
+          nmc:
+            - 'basicswap/interface/nmc/**'
+          wow:
+            - 'basicswap/interface/wow/**'
+          pivx:
+            - 'basicswap/interface/pivx/**'
+          dash:
+            - 'basicswap/interface/dash/**'
+          firo:
+            - 'basicswap/interface/firo/**'
+          bch:
+            - 'basicswap/interface/bch/**'
+          doge:
+            - 'basicswap/interface/doge/**'
+    - name: Build coin test matrix
+      id: matrix
+      env:
+        PART_CHANGED: ${{ steps.filter.outputs.part }}
+        LTC_CHANGED: ${{ steps.filter.outputs.ltc }}
+        DCR_CHANGED: ${{ steps.filter.outputs.dcr }}
+        NMC_CHANGED: ${{ steps.filter.outputs.nmc }}
+        WOW_CHANGED: ${{ steps.filter.outputs.wow }}
+        PIVX_CHANGED: ${{ steps.filter.outputs.pivx }}
+        DASH_CHANGED: ${{ steps.filter.outputs.dash }}
+        FIRO_CHANGED: ${{ steps.filter.outputs.firo }}
+        BCH_CHANGED: ${{ steps.filter.outputs.bch }}
+        DOGE_CHANGED: ${{ steps.filter.outputs.doge }}
+      run: |
+        entries=""
+        # add_entry name test_coin [test_coin_a] [test_coin_b] [skip_tests]
+        # test_coin_a defaults to test_coin, override for coin variants.
+        # test_coin_b defaults to bitcoin.
+        # skip_tests defaults to false, set for coins without a working regtest.
+        add_entry() {
+          if [ -n "$entries" ]; then
+            entries="${entries},"
+          fi
+          entries="${entries}{\"name\":\"$1\",\"test_coin\":\"$2\",\"test_coin_a\":\"${3:-$2}\",\"test_coin_b\":\"${4:-bitcoin}\",\"skip_tests\":\"${5:-false}\"}"
+        }
+        if [ "$PART_CHANGED" = "true" ]; then
+          add_entry test_part_blind particl "particl blind"
+          add_entry test_part_anon particl "particl anon"
+        fi
+        if [ "$LTC_CHANGED" = "true" ]; then
+          add_entry test_ltc litecoin
+        fi
+        if [ "$DCR_CHANGED" = "true" ]; then
+          add_entry test_dcr decred
+        fi
+        if [ "$NMC_CHANGED" = "true" ]; then
+          add_entry test_nmc namecoin
+        fi
+        #if [ "$WOW_CHANGED" = "true" ]; then
+        #  add_entry test_wow wownero wownero bitcoin true
+        #fi
+        #if [ "$PIVX_CHANGED" = "true" ]; then
+        #  add_entry test_pivx pivx
+        #fi
+        if [ "$DASH_CHANGED" = "true" ]; then
+          add_entry test_dash dash
+        fi
+        if [ "$FIRO_CHANGED" = "true" ]; then
+          add_entry test_firo firo
+        fi
+        if [ "$BCH_CHANGED" = "true" ]; then
+          add_entry test_bch bitcoincash
+        fi
+        if [ "$DOGE_CHANGED" = "true" ]; then
+          add_entry test_doge dogecoin
+        fi
+        echo "Coin test matrix: [$entries]"
+        echo "matrix=[$entries]" >> "$GITHUB_OUTPUT"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --require-hashes
+        pip install .[dev]
+    - name: Run flake8
+      run: |
+        flake8
+    - name: Run codespell
+      run: |
+        codespell
+    - name: Run black
+      run: |
+        black --check --diff .
+
+  prepare-cores:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --require-hashes
+        pip install .[dev]
+    - name: Prepare core versions file
+      run: |
+        # Print the core versions to a file for caching
+        basicswap-prepare --version --withcoins="$BASE_COINS" | tail -n +2 > core_versions.txt
+        cat core_versions.txt
+    - name: Cache coin cores
+      id: cache-cores
+      uses: actions/cache@v6
+      with:
+        path: /tmp/cached_bin
+        key: cores-${{ runner.os }}-${{ hashFiles('**/core_versions.txt') }}
+    - if: ${{ steps.cache-cores.outputs.cache-hit != 'true' }}
+      name: Running basicswap-prepare
+      run: |
+        basicswap-prepare --bindir="$BIN_DIR" --preparebinonly --withcoins="$BASE_COINS"
+
+  test:
+    needs: prepare-cores
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: test_other
+            command: |
+              pytest tests/basicswap/test_other.py
+              pytest tests/basicswap/test_amm_config_api.py
+          - name: test_prepare
+            command: |
+              export PYTHONPATH=$(pwd)
+              export TEST_BIN_PATH="$BIN_DIR"
+              export TEST_PATH=/tmp/test_prepare
+              pytest -x tests/basicswap/test_prepare.py
+          - name: test_xmr
+            command: |
+              export PYTHONPATH=$(pwd)
+              export PARTICL_BINDIR="$BIN_DIR/particl"
+              export BITCOIN_BINDIR="$BIN_DIR/bitcoin"
+              export XMR_BINDIR="$BIN_DIR/monero"
+              pytest -x tests/basicswap/test_btc_xmr.py::TestBTC -k "test_003_api or test_02_a_leader_recover_a_lock_tx or test_03_a_follower_recover_a_lock_tx or test_11_fee_validation"
+          - name: test_encrypted_xmr_reload
+            command: |
+              export PYTHONPATH=$(pwd)
+              export TEST_PATH=${TEST_RELOAD_PATH}
+              mkdir -p ${TEST_PATH}/bin
+              cp -r $BIN_DIR/* ${TEST_PATH}/bin/
+              pytest -x tests/basicswap/extended/test_encrypted_xmr_reload.py
+            failure_logs: |
+              for i in 0 1 2; do
+                for logname in core_stderr core_stdout wallet_stderr wallet_stdout; do
+                  echo "=== client${i} ${logname}.log ==="
+                  cat /tmp/test_basicswap/client${i}/monero/${logname}.log || true
+                done
+              done
+          - name: selenium
+            firefox: "true"
+            command: |
+              export TEST_PATH=/tmp/test_persistent
+              mkdir -p ${TEST_PATH}/bin
+              cp -r $BIN_DIR/* ${TEST_PATH}/bin/
+              export PYTHONPATH=$(pwd)
+              python tests/basicswap/test_persistent.py > /tmp/log.txt 2>&1 & TEST_NETWORK_PID=$!
+              echo "Starting test_persistent, PID $TEST_NETWORK_PID"
+              i=0
+              until curl -s -f -o /dev/null "http://localhost:12701/json/coins"
+              do
+                tail -n 1 /tmp/log.txt
+                sleep 2
+                ((++i))
+                if [ $i -ge 60 ]; then
+                  echo "Timed out waiting for test_persistent, PID $TEST_NETWORK_PID"
+                  kill $TEST_NETWORK_PID
+                  (exit 1)  # Fail test
+                  break
+                fi
+              done
+              echo "Running test_settings.py"
+              python tests/basicswap/selenium/test_settings.py
+              echo "Running test_swap_direction.py"
+              python tests/basicswap/selenium/test_swap_direction.py
+              kill $TEST_NETWORK_PID
+            failure_logs: |
+              echo "=== SELENIUM BACKGROUND LOG ==="
+              cat /tmp/log.txt
+    name: ${{ matrix.name }}
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
+    - name: Install Firefox
+      if: ${{ matrix.firefox == 'true' }}
+      run: |
+        if [ $(dpkg-query -W -f='${Status}' firefox 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+          install -d -m 0755 /etc/apt/keyrings
+          wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O- | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee -a /etc/apt/sources.list.d/mozilla.list > /dev/null
+          echo "Package: *" | sudo tee /etc/apt/preferences.d/mozilla
+          echo "Pin: origin packages.mozilla.org" | sudo tee -a /etc/apt/preferences.d/mozilla
+          echo "Pin-Priority: 1000" | sudo tee -a /etc/apt/preferences.d/mozilla
+          sudo apt-get update
+          sudo apt-get install -y firefox gnupg
+        fi
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --require-hashes
+        pip install .[dev]
+    - name: Prepare core versions file
+      run: |
+        basicswap-prepare --version --withcoins="$BASE_COINS" | tail -n +2 > core_versions.txt
+    - name: Restore coin cores cache
+      uses: actions/cache/restore@v6
+      with:
+        path: /tmp/cached_bin
+        key: cores-${{ runner.os }}-${{ hashFiles('**/core_versions.txt') }}
+        fail-on-cache-miss: true
+    - name: Run ${{ matrix.name }}
+      id: run_test
+      run: ${{ matrix.command }}
+    - name: Print log files on failure
+      if: ${{ failure() && steps.run_test.conclusion == 'failure' && matrix.failure_logs }}
+      run: ${{ matrix.failure_logs }}
+
+  test_coins:
+    needs: [changes, prepare-cores]
+    # Skipped entirely when no coin-specific paths changed.
+    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.test_matrix != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.test_matrix) }}
+    name: test_coins (${{ matrix.name }})
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt --require-hashes
+        pip install .[dev]
+    - name: Prepare core versions file
+      run: |
+        basicswap-prepare --version --withcoins="$BASE_COINS" | tail -n +2 > core_versions.txt
+    - name: Restore coin cores cache
+      uses: actions/cache/restore@v6
+      with:
+        path: /tmp/cached_bin
+        key: cores-${{ runner.os }}-${{ hashFiles('**/core_versions.txt') }}
+        fail-on-cache-miss: true
+    - name: Prepare ${{ matrix.test_coin }} core version file
+      if: ${{ !contains(env.BASE_COINS, matrix.test_coin) }}
+      run: |
+        basicswap-prepare --version --withcoins=${{ matrix.test_coin }} | tail -n +2 > test_coin_version.txt
+        cat test_coin_version.txt
+    - name: Cache ${{ matrix.test_coin }} core
+      if: ${{ !contains(env.BASE_COINS, matrix.test_coin) }}
+      id: cache-test-coin
+      uses: actions/cache@v6
+      with:
+        path: /tmp/cached_bin/${{ matrix.test_coin }}
+        key: ${{ matrix.test_coin }}-core-${{ runner.os }}-${{ hashFiles('**/test_coin_version.txt') }}
+    - if: ${{ !contains(env.BASE_COINS, matrix.test_coin) && steps.cache-test-coin.outputs.cache-hit != 'true' }}
+      name: Running basicswap-prepare for ${{ matrix.test_coin }}
+      run: |
+        basicswap-prepare --bindir="$BIN_DIR" --preparebinonly --withcoins=${{ matrix.test_coin }}
+    - name: Run test_coins for ${{ matrix.test_coin_a }}
+      if: ${{ matrix.skip_tests != 'true' }}
+      env:
+        TEST_PATH: /tmp/test_coins
+        TEST_COINS_LIST: ${{ matrix.test_coin }},${{ matrix.test_coin_b }}
+        TEST_COIN_A: ${{ matrix.test_coin_a }}
+        TEST_COIN_B: ${{ matrix.test_coin_b }}
+      run: |
+        export PYTHONPATH=$(pwd)
+        mkdir -p ${TEST_PATH}/bin
+        cp -r $BIN_DIR/* ${TEST_PATH}/bin/
+        pytest -v -s -x --log-cli-level=DEBUG tests/basicswap/test_coins.py --deselect tests/basicswap/test_coins.py::Test::test_set_destination
+    - name: Swap tests skipped
+      if: ${{ matrix.skip_tests == 'true' }}
+      run: |
+        echo "::notice title=${{ matrix.test_coin }}::Binary download verified. Swap tests skipped - ${{ matrix.test_coin }} has no working regtest."
