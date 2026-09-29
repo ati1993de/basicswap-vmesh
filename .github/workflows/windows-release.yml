@@ -1,0 +1,243 @@
+name: Windows x64 Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*-vmesh.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: 'pip'
+
+      - name: Show environment
+        shell: pwsh
+        run: |
+          python --version
+          pip --version
+          git --version
+
+      - name: Install BasicSwap dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install -r requirements.txt --require-hashes
+          pip install .
+          pip install "pyinstaller==6.22.0"
+
+      - name: Verify installed VMESH integration
+        shell: pwsh
+        run: |
+          python -c "from basicswap.basicswap_util import Coins; print('VMESH coin id:', int(Coins.VMESH))"
+          python -c "from basicswap.interface.vmesh.vmesh import VMESHInterface; print('VMESH interface import: PASS')"
+
+      - name: Create PyInstaller wrappers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build_wrappers | Out-Null
+
+          @'
+          from basicswap.bin.prepare import main
+
+          if __name__ == "__main__":
+              main()
+          '@ | Set-Content -Encoding UTF8 build_wrappers/basicswap_prepare_launcher.py
+
+          @'
+          from basicswap.bin.run import main
+
+          if __name__ == "__main__":
+              main()
+          '@ | Set-Content -Encoding UTF8 build_wrappers/basicswap_run_launcher.py
+
+      - name: Build basicswap-prepare.exe
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --console `
+            --name basicswap-prepare `
+            --collect-all basicswap `
+            build_wrappers/basicswap_prepare_launcher.py
+
+      - name: Build basicswap-run.exe
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --console `
+            --name basicswap-run `
+            --collect-all basicswap `
+            build_wrappers/basicswap_run_launcher.py
+
+      - name: Smoke test executables
+        shell: pwsh
+        run: |
+          Write-Host "=== basicswap-prepare ==="
+          .\dist\basicswap-prepare.exe --help
+          if ($LASTEXITCODE -ne 0) {
+            throw "basicswap-prepare.exe smoke test failed"
+          }
+
+          Write-Host "=== basicswap-run ==="
+          .\dist\basicswap-run.exe --help
+          if ($LASTEXITCODE -ne 0) {
+            throw "basicswap-run.exe smoke test failed"
+          }
+
+      - name: Build release directory
+        shell: pwsh
+        run: |
+          $Version = $env:GITHUB_REF_NAME
+
+          if ([string]::IsNullOrWhiteSpace($Version) -or $Version -eq "main") {
+            $Version = "development"
+          }
+
+          $ReleaseDir = "release\VargaMesh-BasicSwap-Windows-x64-$Version"
+
+          New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
+
+          Copy-Item dist\basicswap-prepare.exe $ReleaseDir\
+          Copy-Item dist\basicswap-run.exe $ReleaseDir\
+          Copy-Item README.md $ReleaseDir\
+          Copy-Item README.upstream.md $ReleaseDir\
+          Copy-Item VARGAMESH.md $ReleaseDir\
+          Copy-Item SECURITY.md $ReleaseDir\
+          Copy-Item LICENSE $ReleaseDir\
+
+          @'
+          VargaMesh BasicSwap - Windows x64
+          =================================
+
+          This package is an unofficial VargaMesh-enabled fork of BasicSwap.
+
+          Peer-to-peer.
+          Non-custodial.
+          Users retain control of their private keys.
+
+          Included:
+          - basicswap-prepare.exe
+          - basicswap-run.exe
+
+          VargaMesh:
+          https://vargacoin.com
+
+          Source:
+          https://github.com/ati1993de/basicswap-vmesh
+
+          IMPORTANT
+          ---------
+          Never share:
+          - wallet seed phrases
+          - private keys
+          - RPC passwords
+          - wallet files
+
+          VargaMesh Core is currently supplied separately.
+          Automatic VMESH Core downloading is not enabled in this release.
+
+          This build is experimental. Verify SHA256SUMS.txt before use.
+          '@ | Set-Content -Encoding UTF8 "$ReleaseDir\WINDOWS-README.txt"
+
+          Compress-Archive `
+            -Path "$ReleaseDir\*" `
+            -DestinationPath "VargaMesh-BasicSwap-Windows-x64-$Version.zip" `
+            -CompressionLevel Optimal
+
+      - name: Create SHA256 checksums
+        shell: pwsh
+        run: |
+          $Version = $env:GITHUB_REF_NAME
+
+          if ([string]::IsNullOrWhiteSpace($Version) -or $Version -eq "main") {
+            $Version = "development"
+          }
+
+          $Zip = "VargaMesh-BasicSwap-Windows-x64-$Version.zip"
+
+          $ZipHash = (Get-FileHash $Zip -Algorithm SHA256).Hash.ToLower()
+          $PrepareHash = (Get-FileHash dist\basicswap-prepare.exe -Algorithm SHA256).Hash.ToLower()
+          $RunHash = (Get-FileHash dist\basicswap-run.exe -Algorithm SHA256).Hash.ToLower()
+
+          @"
+          $ZipHash  $Zip
+          $PrepareHash  basicswap-prepare.exe
+          $RunHash  basicswap-run.exe
+          "@ | Set-Content -Encoding ASCII SHA256SUMS.txt
+
+          Get-Content SHA256SUMS.txt
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VargaMesh-BasicSwap-Windows-x64
+          path: |
+            VargaMesh-BasicSwap-Windows-x64-*.zip
+            SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $Version = $env:GITHUB_REF_NAME
+          $Zip = "VargaMesh-BasicSwap-Windows-x64-$Version.zip"
+
+          @'
+          ## VargaMesh BasicSwap — Windows x64
+
+          First public Windows x64 build of the VargaMesh-enabled BasicSwap fork.
+
+          ### Included
+
+          - `basicswap-prepare.exe`
+          - `basicswap-run.exe`
+          - VargaMesh integration
+          - VMESH/BTC atomic swap support
+          - VMESH/PART atomic swap support
+          - VMESH artwork
+          - manual VMESH exchange-rate support
+
+          ### Security model
+
+          Peer-to-peer and non-custodial. Users retain control of their own wallets and private keys.
+
+          This release contains no production wallet, seed phrase, private key or RPC credential.
+
+          ### Important
+
+          VargaMesh Core is currently provided separately. Automatic VMESH Core download/signature provisioning is not enabled yet.
+
+          This Windows build is experimental. Verify the supplied SHA256 checksums before use.
+
+          Upstream project: BasicSwap
+          VargaMesh: https://vargacoin.com
+          '@ | Set-Content -Encoding UTF8 RELEASE_NOTES.md
+
+          gh release create "$Version" `
+            "$Zip" `
+            "SHA256SUMS.txt" `
+            --repo "$env:GITHUB_REPOSITORY" `
+            --title "VargaMesh BasicSwap $Version — Windows x64" `
+            --notes-file RELEASE_NOTES.md
