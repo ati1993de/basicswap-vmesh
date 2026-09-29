@@ -33,23 +33,70 @@ VMESH_RPC_PWD = os.getenv("VMESH_RPC_PWD", "")
 
 class VMESHPrepare(CoinPrepareModule):
 
+    @staticmethod
+    def _detect_windows_desktop_datadir():
+        """Detect the data directory used by VargaMesh Desktop on Windows."""
+        if os.name != "nt":
+            return None
+
+        local_app_data = os.getenv("LOCALAPPDATA", "").strip()
+        if not local_app_data:
+            return None
+
+        candidate = os.path.abspath(
+            os.path.join(local_app_data, "VargaMesh")
+        )
+
+        required_files = (
+            "vargamesh.conf",
+            ".cookie",
+            "vargameshd.pid",
+        )
+
+        if all(
+            os.path.exists(os.path.join(candidate, filename))
+            for filename in required_files
+        ):
+            return candidate
+
+        return None
+
+    def _resolve_data_dir(self, ctx: PrepareContext):
+        configured = os.getenv("VMESH_DATA_DIR", "").strip()
+
+        if configured:
+            return (
+                os.path.abspath(os.path.expanduser(configured)),
+                True,
+            )
+
+        desktop_data_dir = self._detect_windows_desktop_datadir()
+
+        if desktop_data_dir is not None:
+            return desktop_data_dir, True
+
+        return os.path.join(ctx.data_dir, self.name), False
+
     def getConfigSegment(self, ctx: PrepareContext) -> dict:
+        data_dir, external_node = self._resolve_data_dir(ctx)
+
         config = {
             "connection_type": "rpc",
 
             # Setting VMESH_RPC_HOST / VMESH_RPC_PORT automatically
             # makes BasicSwap treat this as an externally managed node.
-            "manage_daemon": ctx.should_manage_daemon(self.ticker),
+            "manage_daemon": (
+                False
+                if external_node
+                else ctx.should_manage_daemon(self.ticker)
+            ),
 
             "rpchost": VMESH_RPC_HOST,
             "rpcport": VMESH_RPC_PORT + ctx.port_offset,
 
             "onionport": VMESH_ONION_PORT + ctx.port_offset,
 
-            "datadir": os.getenv(
-                "VMESH_DATA_DIR",
-                os.path.join(ctx.data_dir, self.name),
-            ),
+            "datadir": data_dir,
 
             "bindir": os.getenv(
                 "VMESH_BINDIR",
@@ -78,6 +125,46 @@ class VMESHPrepare(CoinPrepareModule):
             config["rpcpassword"] = self.rpc_password
 
         return config
+
+    def prepareDataDir(
+        self,
+        ctx: PrepareContext,
+        settings: dict,
+        chain: str,
+        extra_opts: dict,
+    ) -> None:
+        """
+        Do not modify the configuration of an externally managed
+        VargaMesh node.
+
+        This is used on Windows when VargaMesh Desktop is already
+        running from %LOCALAPPDATA%\\VargaMesh and can also be used
+        with VMESH_DATA_DIR for other externally managed nodes.
+        """
+        core_settings = settings["chainclients"][self.name]
+
+        if not core_settings.get("manage_daemon", True):
+            data_dir = core_settings["datadir"]
+
+            if not os.path.isdir(data_dir):
+                raise RuntimeError(
+                    f"External VargaMesh data directory does not exist: {data_dir}"
+                )
+
+            if ctx.logger is not None:
+                ctx.logger.info(
+                    "Using existing externally managed VargaMesh node: %s",
+                    data_dir,
+                )
+
+            return
+
+        return super().prepareDataDir(
+            ctx,
+            settings,
+            chain,
+            extra_opts,
+        )
 
     def getReleaseUrl(
         self,

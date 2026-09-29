@@ -65,6 +65,23 @@ jobs:
 
           Write-Host "Windows SIGHUP guard: PASS"
 
+      - name: Verify VargaMesh Desktop integration
+        shell: pwsh
+        run: |
+          if (-not (Select-String -Path "basicswap/interface/vmesh/core.py" -SimpleMatch "_detect_windows_desktop_datadir")) {
+            throw "Windows VargaMesh Desktop detection missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/interface/vmesh/core.py" -SimpleMatch "LOCALAPPDATA")) {
+            throw "Windows LOCALAPPDATA integration missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/interface/vmesh/core.py" -SimpleMatch "Using existing externally managed VargaMesh node")) {
+            throw "External VargaMesh node protection missing"
+          }
+
+          Write-Host "VargaMesh Desktop integration: PASS"
+
       - name: Create PyInstaller wrappers
         shell: pwsh
         run: |

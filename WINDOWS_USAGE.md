@@ -147,3 +147,34 @@ Do not expose the BasicSwap web interface directly to the public internet.
 
 BasicSwap is non-custodial.
 Users remain responsible for protecting their own wallet recovery data.
+
+
+## Using an existing VargaMesh Desktop node
+
+On Windows, VargaMesh BasicSwap can use the VargaMesh Core node that is
+already running as part of VargaMesh Desktop.
+
+The default VargaMesh Desktop data directory is:
+
+    %LOCALAPPDATA%\VargaMesh
+
+When VargaMesh Desktop is running and this directory contains
+`vargamesh.conf`, `.cookie`, and `vargameshd.pid`, BasicSwap detects it
+automatically.
+
+BasicSwap does not overwrite the VargaMesh Desktop configuration and does
+not start or stop the VargaMesh Desktop node.
+
+After the initial BasicSwap preparation, add VargaMesh with:
+
+    basicswap-prepare.exe --addcoin=vargamesh --nocores
+
+Then start BasicSwap with:
+
+    basicswap-run.exe
+
+VargaMesh Desktop should remain running while VMESH is used in BasicSwap.
+
+BasicSwap creates its own `bsx_wallet` and `bsx_watch` wallets through the
+existing local VargaMesh RPC connection. It does not require a second copy
+of the VargaMesh blockchain.
