@@ -1,157 +1,93 @@
-# BasicSwap DEX (BSX)
+# BasicSwap with VargaMesh (VMESH)
 
-![BasicswapDEX Preview](.github-readme/basicswap_header.jpg)
+This repository is a VargaMesh-enabled fork of BasicSwap.
 
-**[Official Website](https://basicswapdex.com)** | **[News](https://particl.news)** | **[Tutorials](https://academy.particl.io)** | **[Chat]( https://matrix.to/#/#basicswap:matrix.org )**
+It adds support for **VargaMesh (VMESH)** to BasicSwap for peer-to-peer,
+non-custodial atomic swaps.
 
-Table of Contents
+## VargaMesh
 
-* [About](#about)
-* [Features](#features)
-* [Available Assets](#available-assets)
-* [Participate](#participate)
-* [Tutorials](#tutorials)
-* [License](#license)
+- Symbol: `VMESH`
+- Consensus: SHA-256d
+- Architecture: Bitcoin-Core-derived UTXO blockchain
+- Native SegWit
+- Mainnet P2P: `29666`
+- Mainnet RPC: `29667`
+- Bech32 HRP: `vm`
 
-## About
+VargaMesh website:
 
-**BasicSwap** is the world’s most secure and decentralized DEX. It facilitates cross-chain atomic swaps by enabling peers to interact directly with each other within a free and open environment without central points of failure.
+https://vargacoin.com
 
-This DEX is fully non-custodial and features a decentralized order book, letting you create or accept swap offers without any fees, counterparties, or the need for accounts.
+VargaMesh Core:
 
-Built as a low-friction, highly secure solution to the frequent losses of funds on centralized exchanges (e.g., FTX, BitFinex, MtGox), **BasicSwap** aims to provide more reliable and secure cryptocurrency trading conditions for everyone.
+https://github.com/ati1993de/vargamesh-core
 
-**BasicSwap** is currently in active development by the community. While it already offers some of the essential trading features you'd expect from an exchange, more features and quality-of-life improvements are being worked on with the goal to provide a smoother user experience.
+## BasicSwap integration
 
-## Features
+The integration includes:
 
-* **True cross-chain support** — Swap cryptocurrencies that live on entirely different blockchain environments, like Bitcoin and Monero.
-* **Decentralized order book** — Make or take swap offers on a completely decentralized order book system.
-* **No third-party or middleman** — Trade crypto with no intermediaries, completely eliminating central points of failure.
-* **No trading fees** — Only pay the typical cryptocurrency network fee.
-* **Superior financial privacy** — Protect your financial information from unauthorized access with BasicSwap’s privacy-conscious technology.
-* **Full Monero support** — Swap Monero with a variety of other cryptocurrencies like Bitcoin or Particl. No wrapped assets or layer-2 involved.
-* **User-friendly interface** — Enjoy all these features within a user-friendly and intuitive interface that handles all the complicated parts for you.
+- VMESH chain parameters
+- VMESH RPC interface
+- VMESH wallet support
+- VMESH/BTC atomic swap support
+- VMESH/PART atomic swap support
+- BasicSwap order-book integration
+- manual VMESH exchange-rate entry
+- VMESH wallet balance support for modern Bitcoin-Core-derived RPC
+- VMESH coin artwork
 
-## Under the Hood
+VargaMesh Core is currently expected to be provided separately.
 
-**BasicSwap** can be best understood as the decentralized version of the SWIFT messaging network; providing a decentralized messaging protocol that allows for peers to connect directly with each other with the purpose of executing atomic swaps without central points of failure and using official core wallets (Bitcoin Core, Litecoin Core, etc).
+Automatic VMESH Core downloading and signature retrieval are intentionally
+not enabled yet.
 
-**BasicSwap** does not process, initiate, or execute swaps; it merely enables peers to communicate with each other and exchange the required information to simplify the process of using atomic swaps on the respective blockchains of the coins being swapped.
+## Non-custodial design
 
-In essence, **BasicSwap** operates merely as a decentralized messaging protocol supplemented by a user-friendly interface.
+BasicSwap is designed for peer-to-peer atomic swaps.
 
-## Available Assets
+Users retain control of their own private keys and wallets.
 
-BasicSwap is compatible with the following digital assets.
+This repository does not contain production wallets, wallet seeds,
+private keys, RPC credentials or server configuration.
 
-<table>
-  <tr>
-   <td><strong>Coin Name</strong>
-   </td>
-   <td><strong>Ticker</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>Bitcoin
-   </td>
-   <td>BTC
-   </td>
-  </tr>
-  <tr>
-   <td>Monero
-   </td>
-   <td>XMR
-   </td>
-  </tr>
-  <tr>
-   <td>Bitcoin Cash
-   </td>
-   <td>BCH
-   </td>
-  </tr>
-  <tr>
-   <td>Dash
-   </td>
-   <td>DASH
-   </td>
-  </tr>
-  <tr>
-   <td>Litecoin
-   </td>
-   <td>LTC
-   </td>
-  </tr>
-  <tr>
-   <td>Firo
-   </td>
-   <td>FIRO
-   </td>
-  </tr>
-  <tr>
-   <td>PIVX
-   </td>
-   <td>PIVX
-   </td>
-  </tr>
-  <tr>
-   <td>Decred
-   </td>
-   <td>DCR
-   </td>
-  </tr>
-  <tr>
-   <td>Wownero
-   </td>
-   <td>WOW
-   </td>
-  </tr>
-  <tr>
-   <td>Particl
-   </td>
-   <td>PART
-   </td>
-  </tr>
-  <tr>
-   <td>Dogecoin
-   </td>
-   <td>DOGE
-   </td>
-  </tr>
-  <tr>
-   <td>Namecoin
-   </td>
-   <td>NMC
-   </td>
-  </tr>
-</table>
+## Security
 
-If you’d like to add a cryptocurrency to BasicSwap, refer to how other cryptocurrencies have been integrated to the DEX by following [this link](https://academy.particl.io/en/latest/basicswap-guides/basicswapguides_apply.html).
+Never commit:
 
-# Participate
+- seed phrases
+- private keys
+- WIF keys
+- extended private keys
+- RPC passwords
+- wallet files
+- authentication cookies
+- production configuration files
 
-### Chats
+See [SECURITY.md](SECURITY.md).
 
-* **For support** Join the community on [#basicswap:matrix.org](https://matrix.to/#/#basicswap:matrix.org) using a Matrix client.
+## VargaMesh integration details
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/BasicSwapDEX?label=follow%20us&style=social)](http://twitter.com/BasicSwapDEX)
+See [VARGAMESH.md](VARGAMESH.md).
 
-### Documentation, installation
+## Upstream BasicSwap
 
-Follow the guides on [Particl Academy](https://academy.particl.io) for tutorials and guides on how BasicSwap works.
+This project is based on BasicSwap:
 
-* [Download BasicSwapDEX](https://github.com/basicswap/basicswap/tree/master/doc)
+https://github.com/basicswap/basicswap
 
-#### Community chat support
+The original upstream README is preserved as:
 
-* [Matrix](https://matrix.to/#/#basicswap:matrix.org)
+[README.upstream.md](README.upstream.md)
 
-# Tutorials
+## License
 
-You can find a wide variety of tutorials and step-by-step guides about BasicSwap on the [Particl Academy](https://academy.particl.io) or on Particl’s Youtube channel.
+This project retains the upstream BasicSwap license.
 
-If you encounter an issue or try to accomplish something not mentioned in any of the tutorials included in the links above, please join the community chat support channel; you’ll be sure to find help and support from current contributors there!
+See [LICENSE](LICENSE).
 
-# License
+---
 
-BasicSwap is released under MIT software license.
+VargaMesh project:
+
+https://vargacoin.com
