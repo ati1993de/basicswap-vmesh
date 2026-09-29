@@ -45,6 +45,11 @@ jobs:
           python -c "from basicswap.basicswap_util import Coins; print('VMESH coin id:', int(Coins.VMESH))"
           python -c "from basicswap.interface.vmesh.vmesh import VMESHInterface; print('VMESH interface import: PASS')"
 
+      - name: Verify Windows signal compatibility
+        shell: pwsh
+        run: |
+          python -c "from pathlib import Path; s=Path('basicswap/bin/run.py').read_text(encoding='utf-8'); assert 'if hasattr(signal, \"SIGHUP\"):' in s; print('Windows SIGHUP guard: PASS')"
+
       - name: Create PyInstaller wrappers
         shell: pwsh
         run: |
@@ -126,6 +131,7 @@ jobs:
           Copy-Item README.upstream.md $ReleaseDir\
           Copy-Item VARGAMESH.md $ReleaseDir\
           Copy-Item SECURITY.md $ReleaseDir\
+          Copy-Item WINDOWS_USAGE.md $ReleaseDir\
           Copy-Item LICENSE $ReleaseDir\
 
           @'
@@ -211,7 +217,7 @@ jobs:
           @'
           ## VargaMesh BasicSwap — Windows x64
 
-          First public Windows x64 build of the VargaMesh-enabled BasicSwap fork.
+          Windows x64 build of the VargaMesh-enabled BasicSwap fork.
 
           ### Included
 
@@ -229,6 +235,16 @@ jobs:
 
           This release contains no production wallet, seed phrase, private key or RPC credential.
 
+          ### Windows requirement
+
+          GnuPG must be installed before the initial BasicSwap preparation.
+
+          Install it with:
+
+          `winget install --id GnuPG.GnuPG --exact`
+
+          See `WINDOWS_USAGE.md` inside the ZIP for complete instructions.
+
           ### Important
 
           VargaMesh Core is currently provided separately. Automatic VMESH Core download/signature provisioning is not enabled yet.
@@ -244,4 +260,5 @@ jobs:
             "SHA256SUMS.txt" `
             --repo "$env:GITHUB_REPOSITORY" `
             --title "VargaMesh BasicSwap $Version — Windows x64" `
-            --notes-file RELEASE_NOTES.md
+            --notes-file RELEASE_NOTES.md `
+            --prerelease
