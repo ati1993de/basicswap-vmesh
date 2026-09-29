@@ -90,6 +90,7 @@ class VMESHPrepare(CoinPrepareModule):
                 if external_node
                 else ctx.should_manage_daemon(self.ticker)
             ),
+            "external_node": external_node,
 
             "rpchost": VMESH_RPC_HOST,
             "rpcport": VMESH_RPC_PORT + ctx.port_offset,

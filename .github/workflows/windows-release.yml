@@ -88,6 +88,14 @@ jobs:
             throw "VargaMesh-specific external PID handling missing"
           }
 
+          if (-not (Select-String -Path "basicswap/basicswap.py" -SimpleMatch 'cc.get("external_node", False)')) {
+            throw "VargaMesh external_node PID guard missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/interface/vmesh/core.py" -SimpleMatch '"external_node": external_node')) {
+            throw "VargaMesh external_node config flag missing"
+          }
+
           Write-Host "VargaMesh external node PID handling: PASS"
           Write-Host "VargaMesh Desktop integration: PASS"
 

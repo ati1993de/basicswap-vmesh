@@ -1313,7 +1313,8 @@ class BasicSwap(BaseApp, BSXNetwork, UIApp):
             # without comparing it against a BasicSwap-owned daemon PID.
             skip_pid_check = (
                 cc["name"] == "vargamesh"
-                and not cc.get("manage_daemon", True)
+                and cc.get("external_node", False)
+                and cc.get("pid") is None
             )
 
             datadir_pid = -1
