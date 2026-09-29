@@ -74,6 +74,8 @@ jobs:
             --console `
             --name basicswap-prepare `
             --collect-all basicswap `
+            --collect-all coincurve `
+            --hidden-import coincurve._cffi_backend `
             build_wrappers/basicswap_prepare_launcher.py
 
       - name: Build basicswap-run.exe
@@ -86,6 +88,8 @@ jobs:
             --console `
             --name basicswap-run `
             --collect-all basicswap `
+            --collect-all coincurve `
+            --hidden-import coincurve._cffi_backend `
             build_wrappers/basicswap_run_launcher.py
 
       - name: Smoke test executables
