@@ -1303,12 +1303,25 @@ class BasicSwap(BaseApp, BSXNetwork, UIApp):
             self.log.debug(
                 f"Reading {Coins(coin).name} rpc credentials from auth cookie {authcookiepath}",
             )
-            # Wait for daemon to start
-            # Test pids to ensure authcookie is read for the correct process
+            # Wait for daemon to start.
+            # Test pids to ensure authcookie is read for the correct process.
+            #
+            # An externally managed VargaMesh node (for example VargaMesh
+            # Desktop on Windows) is intentionally not started by BasicSwap,
+            # therefore cc["pid"] is None.  In that mode the configured
+            # datadir itself is trusted and the RPC auth cookie is used
+            # without comparing it against a BasicSwap-owned daemon PID.
+            skip_pid_check = (
+                cc["name"] == "vargamesh"
+                and not cc.get("manage_daemon", True)
+            )
+
             datadir_pid = -1
             for i in range(20):
                 try:
-                    if os.name == "nt" and cc["core_version_group"] <= 17:
+                    if skip_pid_check:
+                        pass
+                    elif os.name == "nt" and cc["core_version_group"] <= 17:
                         # Older core versions don't write a pid file on windows
                         pass
                     else:
@@ -1322,10 +1335,11 @@ class BasicSwap(BaseApp, BSXNetwork, UIApp):
                         self.log.warning(f"Error, iteration {i}: {e}")
                     self.delay_event.wait(0.5)
             try:
-                if (
-                    os.name != "nt" or cc["core_version_group"] > 17
-                ):  # Litecoin on windows doesn't write a pid file
-                    ensure(datadir_pid == cc["pid"], "Mismatched pid")
+                if not skip_pid_check:
+                    if (
+                        os.name != "nt" or cc["core_version_group"] > 17
+                    ):  # Litecoin on windows doesn't write a pid file
+                        ensure(datadir_pid == cc["pid"], "Mismatched pid")
                 with open(authcookiepath, "rb") as fp:
                     cc["rpcauth"] = escape_rpcauth(fp.read().decode("UTF-8"))
             except Exception as e:

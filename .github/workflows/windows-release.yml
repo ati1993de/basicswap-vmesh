@@ -80,6 +80,15 @@ jobs:
             throw "External VargaMesh node protection missing"
           }
 
+          if (-not (Select-String -Path "basicswap/basicswap.py" -SimpleMatch "skip_pid_check = (")) {
+            throw "External VargaMesh PID handling missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/basicswap.py" -SimpleMatch 'cc["name"] == "vargamesh"')) {
+            throw "VargaMesh-specific external PID handling missing"
+          }
+
+          Write-Host "VargaMesh external node PID handling: PASS"
           Write-Host "VargaMesh Desktop integration: PASS"
 
       - name: Create PyInstaller wrappers
