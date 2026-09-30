@@ -99,6 +99,25 @@ jobs:
           Write-Host "VargaMesh external node PID handling: PASS"
           Write-Host "VargaMesh Desktop integration: PASS"
 
+      - name: Verify Windows VMESH auto bootstrap
+        shell: pwsh
+        run: |
+          python -m py_compile basicswap/bin/windows_bootstrap.py
+
+          if (-not (Select-String -Path "basicswap/bin/windows_bootstrap.py" -SimpleMatch "_launch_vargamesh_desktop")) {
+            throw "VargaMesh Desktop auto-launch support missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/bin/windows_bootstrap.py" -SimpleMatch "--addcoin=vargamesh")) {
+            throw "Automatic VargaMesh addcoin support missing"
+          }
+
+          if (-not (Select-String -Path "basicswap/bin/windows_bootstrap.py" -SimpleMatch "basicswap-prepare.exe")) {
+            throw "Automatic prepare executable integration missing"
+          }
+
+          Write-Host "Windows VMESH auto bootstrap: PASS"
+
       - name: Create PyInstaller wrappers
         shell: pwsh
         run: |
@@ -112,7 +131,7 @@ jobs:
           '@ | Set-Content -Encoding UTF8 build_wrappers/basicswap_prepare_launcher.py
 
           @'
-          from basicswap.bin.run import main
+          from basicswap.bin.windows_bootstrap import main
 
           if __name__ == "__main__":
               main()
@@ -211,8 +230,8 @@ jobs:
           - RPC passwords
           - wallet files
 
-          VargaMesh Core is currently supplied separately.
-          Automatic VMESH Core downloading is not enabled in this release.
+          When VargaMesh Desktop is installed on Windows, BasicSwap can automatically reuse its existing local VMESH node and blockchain.
+          A second VargaMesh blockchain is not required.
 
           This build is experimental. Verify SHA256SUMS.txt before use.
           '@ | Set-Content -Encoding UTF8 "$ReleaseDir\WINDOWS-README.txt"
@@ -296,7 +315,7 @@ jobs:
 
           ### Important
 
-          VargaMesh Core is currently provided separately. Automatic VMESH Core download/signature provisioning is not enabled yet.
+          On Windows, VargaMesh Desktop is detected automatically. BasicSwap reuses the existing Desktop VMESH node and blockchain and creates dedicated BasicSwap swap wallets.
 
           This Windows build is experimental. Verify the supplied SHA256 checksums before use.
 

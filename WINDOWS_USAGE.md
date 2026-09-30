@@ -178,3 +178,26 @@ VargaMesh Desktop should remain running while VMESH is used in BasicSwap.
 BasicSwap creates its own `bsx_wallet` and `bsx_watch` wallets through the
 existing local VargaMesh RPC connection. It does not require a second copy
 of the VargaMesh blockchain.
+
+
+## Automatic VargaMesh Desktop integration
+
+On Windows, `basicswap-run.exe` automatically checks for VargaMesh Desktop.
+
+When VargaMesh is not yet configured in BasicSwap, the launcher:
+
+1. detects the VargaMesh Desktop data directory at `%LOCALAPPDATA%\VargaMesh`
+2. checks whether the VargaMesh Desktop node is running
+3. attempts to start VargaMesh Desktop when necessary
+4. waits for the local VMESH RPC node
+5. runs the VargaMesh add-coin setup automatically
+6. reuses the existing VargaMesh Desktop blockchain
+7. starts BasicSwap normally
+
+BasicSwap does not replace or import the user's VargaMesh Desktop spending wallet.
+
+Dedicated BasicSwap wallets such as `bsx_wallet` and `bsx_watch` are used for swap operations.
+
+The VargaMesh Desktop node remains externally managed. Closing BasicSwap must not stop the VargaMesh Desktop node.
+
+If VargaMesh Desktop is not installed or cannot be detected, BasicSwap continues without automatically enabling VMESH.
