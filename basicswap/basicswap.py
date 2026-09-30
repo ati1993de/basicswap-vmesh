@@ -935,6 +935,7 @@ class BasicSwap(BaseApp, BSXNetwork, UIApp):
             "electrum_port",
             "electrum_ssl",
             "electrum_poll_interval",
+            "external_node",
         ):
             if setting_name in chain_client_settings:
                 self.coin_clients[coin][setting_name] = chain_client_settings[
