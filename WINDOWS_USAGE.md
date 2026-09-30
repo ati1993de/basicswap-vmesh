@@ -1,55 +1,297 @@
 # VargaMesh BasicSwap - Windows x64
 
-This package provides a Windows x64 build of the VargaMesh-enabled
-BasicSwap fork.
+This package provides a native Windows x64 build of the
+VargaMesh-enabled BasicSwap fork.
 
 Native Windows support is currently experimental.
 
 ## Included
 
-- basicswap-prepare.exe
-- basicswap-run.exe
+- `basicswap-prepare.exe`
+- `basicswap-run.exe`
 
-## Requirement: GnuPG
+## Recommended setup
+
+For the easiest VMESH setup, install and run VargaMesh Desktop first.
+
+BasicSwap can automatically reuse the local VargaMesh Desktop node,
+blockchain and RPC connection.
+
+Default VargaMesh Desktop data directory:
+
+    %LOCALAPPDATA%\VargaMesh
+
+A second copy of the VargaMesh blockchain is not required.
+
+## 1. Verify the downloaded release
+
+Download the Windows ZIP and `SHA256SUMS.txt` from the official
+VargaMesh BasicSwap GitHub release.
+
+Verify the ZIP before running it.
+
+Example in PowerShell:
+
+    Get-FileHash .\VargaMesh-BasicSwap-Windows-x64-<version>.zip -Algorithm SHA256
+
+Compare the displayed SHA256 value with `SHA256SUMS.txt`.
+
+Only continue when the checksum matches.
+
+## 2. GnuPG requirement
 
 BasicSwap uses GnuPG to verify downloaded core binaries.
 
-Before the first setup, open Command Prompt as Administrator and run:
+Before the first setup, open Command Prompt or PowerShell as
+Administrator and run:
 
     winget install --id GnuPG.GnuPG --exact
 
-After installation, completely close Command Prompt and open it again.
+After installation, completely close the terminal and open it again.
 
 Verify GnuPG:
 
     gpg --version
-    where gpg
+    where.exe gpg
 
 Both commands should work before continuing.
 
-## First-time setup
+## 3. Extract the complete ZIP
 
-Extract the complete ZIP file.
-
-Open Command Prompt inside the extracted folder.
+Extract the complete release ZIP to a normal local folder.
 
 Example:
 
-    cd C:\Users\<Username>\Desktop\VargaMesh-BasicSwap-Windows-x64-v0.18.9-vmesh.2
+    C:\Users\<Username>\Desktop\VargaMesh-BasicSwap-Windows-x64-<version>
 
-Then run:
+Do not run the executable directly from inside the ZIP archive.
 
-    basicswap-prepare.exe
+## 4. Start VargaMesh Desktop
+
+Start VargaMesh Desktop first.
+
+If possible, wait until the VargaMesh node is running and synchronized.
+
+BasicSwap normally detects:
+
+    %LOCALAPPDATA%\VargaMesh
+
+The launcher can also attempt to start VargaMesh Desktop automatically
+when it is installed but not currently running.
+
+Once detected, the VargaMesh node is treated as an externally managed
+node. BasicSwap reuses it and does not require another VMESH blockchain.
+
+## 5. First BasicSwap start
+
+For the first start, right-click:
+
+    basicswap-run.exe
+
+and choose:
+
+    Run as administrator
+
+Keep the console window open.
+
+The launcher automatically:
+
+1. detects the VargaMesh Desktop installation
+2. checks the local VargaMesh data directory
+3. waits for the VMESH RPC service
+4. configures VargaMesh in BasicSwap when necessary
+5. uses `--addcoin=vargamesh --nocores`
+6. reuses the existing VargaMesh Desktop node
+7. starts the required BasicSwap components
+8. starts the local BasicSwap web interface
 
 The default BasicSwap data directory is:
 
     C:\Users\<Username>\.basicswap
 
-Wait until preparation has completed.
+## 6. The first start can take longer
 
-The setup may display wallet recovery information or a mnemonic.
+The first BasicSwap start can take longer because the bundled Particl
+node may need time to initialize.
 
-Keep all recovery information private and store it securely.
+Messages such as:
+
+    Waiting for PART RPC. Trying again...
+
+can be normal during startup and do not automatically mean that the
+setup has failed.
+
+Wait for the startup process to continue.
+
+A successful startup should eventually contain messages similar to:
+
+    Particl Core version ...
+    VargaMesh Core version ...
+    Starting HTTP server at http://127.0.0.1:12700
+
+## 7. If the first attempt does not reach the web interface
+
+In some Windows environments, the first launch may initialize the
+required files and processes but the web interface may not become
+available immediately.
+
+If the first attempt does not complete:
+
+1. allow the current startup attempt enough time to finish
+2. close the BasicSwap launcher if it has stopped or clearly failed
+3. do not leave multiple `basicswap-run.exe` instances running
+4. wait approximately 15-30 seconds
+5. make sure VargaMesh Desktop is still running
+6. right-click `basicswap-run.exe`
+7. choose `Run as administrator` again
+
+A second launch can then reuse the Particl and BasicSwap files created
+during the first attempt.
+
+Do not repeatedly start several copies of BasicSwap at the same time.
+
+## 8. Open BasicSwap
+
+When startup has completed successfully, open:
+
+    http://127.0.0.1:12700
+
+The BasicSwap web interface should show both Particl and VargaMesh.
+
+For VMESH, a healthy installation should show the VargaMesh wallet,
+current blockchain height and synchronization status.
+
+## 9. Expected VargaMesh startup messages
+
+Typical successful VMESH messages include:
+
+    [VMESH] Existing VargaMesh Desktop node detected:
+    [VMESH] VargaMesh already configured.
+    [VMESH] Reusing VargaMesh Desktop node.
+
+and later:
+
+    Reading VMESH rpc credentials from auth cookie
+    VargaMesh Core version ...
+
+The VargaMesh Desktop node remains externally managed.
+
+Closing BasicSwap must not stop the VargaMesh Desktop node.
+
+## 10. Dedicated BasicSwap VMESH wallets
+
+BasicSwap does not replace or import the user's normal VargaMesh
+Desktop spending wallet.
+
+For swap operations, BasicSwap creates dedicated wallets such as:
+
+    bsx_wallet
+    bsx_watch
+
+through the existing local VargaMesh RPC connection.
+
+## 11. Existing BasicSwap installation
+
+If this file already exists:
+
+    C:\Users\<Username>\.basicswap\basicswap.json
+
+you normally do not need to run the initial BasicSwap preparation again.
+
+Start with:
+
+    basicswap-run.exe
+
+The launcher checks whether VargaMesh is already configured and reuses
+the VargaMesh Desktop node automatically.
+
+## 12. Manual VMESH setup fallback
+
+Normally the automatic launcher is sufficient.
+
+If automatic VMESH configuration is unavailable but VargaMesh Desktop
+is already running, the manual fallback is:
+
+    basicswap-prepare.exe --addcoin=vargamesh --nocores
+
+Then start:
+
+    basicswap-run.exe
+
+Do not remove `--nocores` when the intention is to reuse the VargaMesh
+Desktop node.
+
+## 13. Settings file not found
+
+If `basicswap-run.exe` reports:
+
+    Settings file not found
+
+the BasicSwap base installation may not have been initialized.
+
+Run:
+
+    basicswap-prepare.exe
+
+and allow it to complete.
+
+Then start:
+
+    basicswap-run.exe
+
+again.
+
+## 14. GPG error
+
+If preparation reports:
+
+    Unable to run gpg
+
+install GnuPG:
+
+    winget install --id GnuPG.GnuPG --exact
+
+Close and reopen Command Prompt or PowerShell afterwards.
+
+Verify:
+
+    gpg --version
+    where.exe gpg
+
+Then retry the BasicSwap setup.
+
+## 15. Upstream update message
+
+BasicSwap may display an update message for the upstream BasicSwap
+project, for example:
+
+    Update available: v0.18.10
+
+The VargaMesh-enabled Windows package is a dedicated BasicSwap fork.
+
+If VMESH integration is required, use releases from:
+
+    https://github.com/ati1993de/basicswap-vmesh
+
+Do not assume that replacing this package with an upstream BasicSwap
+build will retain VargaMesh-specific integration.
+
+## 16. Security
+
+The BasicSwap web interface should normally remain local at:
+
+    127.0.0.1:12700
+
+Do not expose the BasicSwap web interface directly to the public
+internet.
+
+Running as Administrator is recommended here for the initial Windows
+setup/troubleshooting only. Do not run unrelated or unverified
+executables with elevated privileges.
+
+Always verify the release SHA256 checksum before use.
+
+BasicSwap is non-custodial.
 
 Never share:
 
@@ -61,143 +303,18 @@ Never share:
 - RPC passwords
 - wallet files
 
-## Starting BasicSwap
+Keep all wallet recovery information private and store it securely.
 
-After preparation has completed successfully, run:
-
-    basicswap-run.exe
-
-Keep the program running.
-
-Then open this address in your browser:
-
-    http://127.0.0.1:12700
-
-## Existing installation
-
-If this file already exists:
-
-    C:\Users\<Username>\.basicswap\basicswap.json
-
-you normally do not need to run the initial preparation again.
-
-Start BasicSwap with:
-
-    basicswap-run.exe
-
-## Settings file not found
-
-If basicswap-run.exe reports:
-
-    Settings file not found
-
-run:
-
-    basicswap-prepare.exe
-
-first.
-
-## GPG error
-
-If preparation reports:
-
-    Unable to run gpg
-
-install GnuPG:
-
-    winget install --id GnuPG.GnuPG --exact
-
-Close and reopen Command Prompt afterwards.
-
-Verify:
-
-    gpg --version
-    where gpg
-
-Then retry:
-
-    basicswap-prepare.exe
-
-## VargaMesh Core
-
-VargaMesh support is integrated into this BasicSwap fork.
-
-VargaMesh Core itself is currently provided separately.
-Automatic VargaMesh Core provisioning is not enabled yet.
+## Links
 
 VargaMesh:
 
-https://vargacoin.com
+    https://vargacoin.com
 
 VargaMesh Core:
 
-https://github.com/ati1993de/vargamesh-core
+    https://github.com/ati1993de/vargamesh-core
 
-BasicSwap VargaMesh fork:
+VargaMesh BasicSwap fork:
 
-https://github.com/ati1993de/basicswap-vmesh
-
-## Security
-
-The BasicSwap web interface should normally remain local at:
-
-    127.0.0.1:12700
-
-Do not expose the BasicSwap web interface directly to the public internet.
-
-BasicSwap is non-custodial.
-Users remain responsible for protecting their own wallet recovery data.
-
-
-## Using an existing VargaMesh Desktop node
-
-On Windows, VargaMesh BasicSwap can use the VargaMesh Core node that is
-already running as part of VargaMesh Desktop.
-
-The default VargaMesh Desktop data directory is:
-
-    %LOCALAPPDATA%\VargaMesh
-
-When VargaMesh Desktop is running and this directory contains
-`vargamesh.conf`, `.cookie`, and `vargameshd.pid`, BasicSwap detects it
-automatically.
-
-BasicSwap does not overwrite the VargaMesh Desktop configuration and does
-not start or stop the VargaMesh Desktop node.
-
-After the initial BasicSwap preparation, add VargaMesh with:
-
-    basicswap-prepare.exe --addcoin=vargamesh --nocores
-
-Then start BasicSwap with:
-
-    basicswap-run.exe
-
-VargaMesh Desktop should remain running while VMESH is used in BasicSwap.
-
-BasicSwap creates its own `bsx_wallet` and `bsx_watch` wallets through the
-existing local VargaMesh RPC connection. It does not require a second copy
-of the VargaMesh blockchain.
-
-
-## Automatic VargaMesh Desktop integration
-
-On Windows, `basicswap-run.exe` automatically checks for VargaMesh Desktop.
-
-When VargaMesh is not yet configured in BasicSwap, the launcher:
-
-1. detects the VargaMesh Desktop data directory at `%LOCALAPPDATA%\VargaMesh`
-2. checks whether the VargaMesh Desktop node is running
-3. attempts to start VargaMesh Desktop when necessary
-4. waits for the local VMESH RPC node
-5. runs the VargaMesh add-coin setup automatically
-6. reuses the existing VargaMesh Desktop blockchain
-7. starts BasicSwap normally
-
-BasicSwap does not replace or import the user's VargaMesh Desktop spending wallet.
-
-Dedicated BasicSwap wallets such as `bsx_wallet` and `bsx_watch` are used for swap operations.
-
-The VargaMesh Desktop node remains externally managed. Closing BasicSwap must not stop the VargaMesh Desktop node.
-
-If VargaMesh Desktop is not installed or cannot be detected, BasicSwap continues without automatically enabling VMESH.
+    https://github.com/ati1993de/basicswap-vmesh

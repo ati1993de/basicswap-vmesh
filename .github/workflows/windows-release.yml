@@ -233,6 +233,19 @@ jobs:
           When VargaMesh Desktop is installed on Windows, BasicSwap can automatically reuse its existing local VMESH node and blockchain.
           A second VargaMesh blockchain is not required.
 
+
+          FIRST WINDOWS START
+          -------------------
+          1. Start VargaMesh Desktop first and allow its local node to become ready.
+          2. For the first BasicSwap start, right-click basicswap-run.exe and choose "Run as administrator".
+          3. Keep the console window open while Particl and VMESH initialize.
+          4. Messages such as "Waiting for PART RPC" can be normal during the first startup.
+          5. If the first attempt does not reach http://127.0.0.1:12700, close any stopped or failed BasicSwap launcher.
+          6. Wait approximately 15-30 seconds, confirm VargaMesh Desktop is still running, then run basicswap-run.exe once more as Administrator.
+          7. Do not start several BasicSwap instances at the same time.
+
+          See WINDOWS_USAGE.md for complete first-start and troubleshooting instructions.
+
           This build is experimental. Verify SHA256SUMS.txt before use.
           '@ | Set-Content -Encoding UTF8 "$ReleaseDir\WINDOWS-README.txt"
 
@@ -312,6 +325,19 @@ jobs:
           `winget install --id GnuPG.GnuPG --exact`
 
           See `WINDOWS_USAGE.md` inside the ZIP for complete instructions.
+
+
+          ### First Windows start
+
+          1. Start VargaMesh Desktop first and allow its local node to become ready.
+          2. For the initial setup, right-click `basicswap-run.exe` and choose **Run as administrator**.
+          3. Keep the console window open while Particl and VMESH initialize.
+          4. Messages such as `Waiting for PART RPC` can be normal during first startup.
+          5. If the first attempt does not reach `http://127.0.0.1:12700`, close any stopped or failed BasicSwap launcher.
+          6. Wait approximately 15-30 seconds, make sure VargaMesh Desktop is still running, then launch `basicswap-run.exe` once more as Administrator.
+          7. Do not run several BasicSwap launcher instances at the same time.
+
+          The first launch can initialize required Particl and BasicSwap files even if the web interface does not become available immediately. A second clean launch can therefore succeed once initialization has completed.
 
           ### Important
 
